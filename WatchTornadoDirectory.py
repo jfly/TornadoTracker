@@ -59,7 +59,8 @@ def main():
             else:
                 table += "<tr class='success'>\n"
             link = os.path.relpath(parser.htmlFile, args.analyzed_folder)
-            table += "<td><a href='%s'>%s</a></td><td>%s</td>\n" % ( link, timestamp, parser.value() )
+            prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
+            table += "<td><a href='%s'>%s</a></td><td>%s</td>\n" % ( link, prettyDate, parser.value() )
             table += "</tr>\n"
 
         table += "</tbody>\n</table>\n"
