@@ -15,7 +15,8 @@ def main():
     args = parser.parse_args()
 
     assert os.path.isdir(args.image_folder)
-    assert os.path.isdir(args.analyzed_folder)
+    if not os.path.isdir(args.analyzed_folder):
+        os.makedirs(args.analyzed_folder)
     indexHtmlFile = os.path.join(args.analyzed_folder, "index.html")
 
     class EventHandler(pyinotify.ProcessEvent):
