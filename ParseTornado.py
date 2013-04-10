@@ -351,12 +351,14 @@ class Parser(object):
 """)
         index.close()
 
-    def value(self):
-        if hasattr(self, 'value_'):
+    def value(self, forceReparse=False):
+        if not forceReparse and hasattr(self, 'value_'):
             return self.value_
 
         einfo = None
         try:
+            if os.path.isdir(self.dataDir):
+                shutil.rmtree(self.dataDir)
             os.makedirs(self.dataDir)
             image = Image.open(self.imageFileName)
             image = normalize(self, image)
