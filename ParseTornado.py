@@ -82,7 +82,8 @@ def findPixels(size, pixdata, color, colorDelta):
                 pixels.append((x, y))
     return pixels
 
-def normalize(parser, image):
+# I am so damn good at OOP design and naming functions yeah you should hire me.
+def parse(parser, image):
     originalImage = image
     image, originalToThumbnailRatio = resize(image)
 
@@ -225,11 +226,28 @@ def normalize(parser, image):
         digitImage = image.copy()
         right = left + digitWidth
         digitImage = digitImage.transform((int(digitWidth), height), Image.EXTENT, (int(left), 0, int(right), height))
+        digitImage = digitImage.convert('1') # convert to black and white
         digitImages.append(digitImage)
         left = right + digitSpacing
-    parser.addStep("Extracted digits.", digitImages)
+    percentages = []
+    for digitImage in digitImages:
+        percentages.append("%.2f" % getPercentageWhite(digitImage)) 
+    parser.addStep("Extracted digits (percentages white: %s)." % percentages, digitImages)
 
-    return image
+
+    return 4242#<<<
+
+def getPercentageWhite(image):
+    pixdata = image.load()
+    width, height = image.size
+    whiteCount = 0
+    for x in range(width):
+        for y in range(height):
+            white = pixdata[x, y]
+            if white:
+                whiteCount += 1
+
+    return 100.0*whiteCount/(width*height)
 
 def extractBlackArea(parser, image, bl, br, tl, tr):
     width, height = image.size
@@ -352,6 +370,11 @@ class Parser(object):
         stepNumber = len(self.steps) + 1
         self.steps.append((description, postStepImages))
 
+    def stepImage(self, stepNumber, nthImage=0):
+        imageFileName = "step%s-%s.jpg" % ( stepNumber, nthImage )
+        absoluteImageFileName = os.path.join(self.dataDir, imageFileName)
+        return absoluteImageFileName
+
     def generateHtml(self, einfo=None):
         index = open(self.htmlFile, 'w')
         index.write("""<html>
@@ -362,8 +385,8 @@ class Parser(object):
 
             index.write("<h2>%s. %s</h2>\n" % ( stepNumber, description ))
             for nthImage, image in enumerate(images):
-                relativeImageFileName = "step%s-%s.jpg" % ( stepNumber, nthImage )
-                absoluteImageFileName = os.path.join(self.dataDir, relativeImageFileName)
+                absoluteImageFileName = self.stepImage(stepNumber, nthImage)
+                relativeImageFileName = os.path.basename(absoluteImageFileName)
                 index.write("<img src='%s'/>\n" % ( relativeImageFileName ))
                 image.save(absoluteImageFileName)
 
@@ -386,12 +409,11 @@ class Parser(object):
                 shutil.rmtree(self.dataDir)
             os.makedirs(self.dataDir)
             image = Image.open(self.imageFileName)
-            image = normalize(self, image)
+            self.value_ = parse(self, image)
         except:
             self.value_ = None
             einfo = sys.exc_info()
         else:
-            self.value_ = 4242 #<<<
             f = open(self.parsedValueTextFile, "w")
             f.write("%s\n" % self.value_)
             f.close()
@@ -404,6 +426,9 @@ def main():
     analyzedDirectory = '/home/jeremy/tmp/'
     # straight up
     fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365395374.jpg"
+    # sharper version of same number
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394548.jpg"
+
     # yee rotated
     #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394659.jpg"
     # rotated other way (almost works, but flash screws up extractBlackArea())

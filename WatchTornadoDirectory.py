@@ -52,7 +52,7 @@ def main():
         table = "<table class='gridtable'>\n"
         table += "<thead>\n"
         table += "<tr>\n"
-        table += "<th>Date</th><th>Value</th>\n"
+        table += "<th>Date</th><th>Value</th><th></th>\n"
         table += "</tr>\n"
         table += "</thead>\n"
         for timestamp, parser in sorted(parserByTimestamp.iteritems()):
@@ -62,8 +62,9 @@ def main():
             else:
                 table += "<tr class='success'>\n"
             link = os.path.relpath(parser.htmlFile, args.analyzed_folder)
+            image = os.path.relpath(parser.stepImage(8), args.analyzed_folder)
             prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
-            table += "<td><a href='%s'>%s</a></td><td>%s</td>\n" % ( link, prettyDate, parser.value() )
+            table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img height='20px' src='%s'/></td>\n" % ( link, prettyDate, parser.value(), image )
             table += "</tr>\n"
 
         table += "</tbody>\n</table>\n"
