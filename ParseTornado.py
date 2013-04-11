@@ -86,7 +86,7 @@ def normalize(parser, image):
     originalImage = image
     image, originalToThumbnailRatio = resize(image)
 
-    parser.addStep("Resized image down to something manageable.", image)
+    parser.addStep("Resized image down to something manageable.", [image])
 
     # The counter has a red square at the bottom left and bottom right,
     # and a green square at the top left and top right.
@@ -117,7 +117,7 @@ def normalize(parser, image):
         markPoint(markPixelsImage, redGroup.center, color='red', size=groupDiameter, strokeWidth=2*i+1)
     for i, greenGroup in enumerate(greenGroups):
         markPoint(markPixelsImage, greenGroup.center, color='green', size=groupDiameter, strokeWidth=2*i+1)
-    parser.addStep("Found %s red groups & %s green groups (larger strokes indicate higher pixel density)." % ( len(redGroups), len(greenGroups) ), markPixelsImage)
+    parser.addStep("Found %s red groups & %s green groups (larger strokes indicate higher pixel density)." % ( len(redGroups), len(greenGroups) ), [markPixelsImage])
 
     redGroups = redGroups[-2:]
     greenGroups = greenGroups[-2:]
@@ -127,7 +127,7 @@ def normalize(parser, image):
         markPoint(markPixelsImage, redGroup.center, color='red', size=groupDiameter, strokeWidth=2)
     for i, greenGroup in enumerate(greenGroups):
         markPoint(markPixelsImage, greenGroup.center, color='green', size=groupDiameter, strokeWidth=2)
-    parser.addStep("Picked 2 heaviest groups of reds and 2 heaviest groups of greens.", markPixelsImage)
+    parser.addStep("Picked 2 heaviest groups of reds and 2 heaviest groups of greens.", [markPixelsImage])
 
     b1, b2 = [ g.center for g in redGroups ]
     t1, t2 = [ g.center for g in greenGroups ]
@@ -164,7 +164,7 @@ def normalize(parser, image):
     draw = ImageDraw.Draw(markEdgesImage)
     draw.line((b1[0], b1[1], t1[0], t1[1]), fill='orange', width=5)
     draw.line((b2[0], b2[1], t2[0], t2[1]), fill='red', width=5)
-    parser.addStep("Identified a vertical edge (orange) that needs to be rotated %s degrees counter clockwise, and a vertical edge (red) that needs to be rotated %s degrees counter clockwise. Averaging angles is <a href='http://en.wikipedia.org/wiki/Circular_mean'>hard</a>, but I'm going to give it a shot because because I'm a hard worker. Going to rotate %s degrees ccw (+ magic offset of %s degree(s))." % (ccwAngleToRotate1, ccwAngleToRotate2, ccwAngleToRotate, magicOffset), markEdgesImage)
+    parser.addStep("Identified a vertical edge (orange) that needs to be rotated %s degrees counter clockwise, and a vertical edge (red) that needs to be rotated %s degrees counter clockwise. Averaging angles is <a href='http://en.wikipedia.org/wiki/Circular_mean'>hard</a>, but I'm going to give it a shot because because I'm a hard worker. Going to rotate %s degrees ccw (+ magic offset of %s degree(s))." % (ccwAngleToRotate1, ccwAngleToRotate2, ccwAngleToRotate, magicOffset), [markEdgesImage])
 
     b1, b2 = [ scale(originalToThumbnailRatio, g.center) for g in redGroups ]
     t1, t2 = [ scale(originalToThumbnailRatio, g.center) for g in greenGroups ]
@@ -187,7 +187,7 @@ def normalize(parser, image):
     markPoint(markCornersImage, br, color='orange', strokeWidth=5)
     markPoint(markCornersImage, tl, color='green', strokeWidth=5)
     markPoint(markCornersImage, tr, color='blue', strokeWidth=5)
-    parser.addStep("Rotated and clipped image. Discovered bl (red) br (orange) tl (green) tr (blue) corners.", markCornersImage)
+    parser.addStep("Rotated and clipped image. Discovered bl (red) br (orange) tl (green) tr (blue) corners.", [markCornersImage])
 
     # Sanity checking that we've picked out a rectangle, and that it's oriented.
     verticalEdge1 = sub(tl, bl)
@@ -203,13 +203,37 @@ def normalize(parser, image):
     assert abs(topHorizontalEdge[1]) <= THRESHOLD
 
     image = extractBlackArea(parser, image, bl, br, tl, tr)
-    parser.addStep("Cropped out black area.", image)
+    parser.addStep("Cropped out black area.", [image])
+
+    # image is now just the black area with 5 digits.
+    # We extract those 5 digits now. This is going to be very hardcoded and
+    # awful.
+    width, height = image.size
+    left = int(0.07*width)
+    right = int(width - 0.12*width)
+    top = int(0.4*height)
+    bottom = int(height - 0.2*height)
+    image = image.transform((right-left, bottom-top), Image.EXTENT, (left, top, right, bottom))
+    parser.addStep("Cropped out excess black.", [image])
+
+    width, height = image.size
+    digitWidth = 0.14*width
+    digitSpacing = (width - 5*digitWidth)/4.0
+    left = 0
+    digitImages = []
+    for nthDigit in range(5):
+        digitImage = image.copy()
+        right = left + digitWidth
+        digitImage = digitImage.transform((int(digitWidth), height), Image.EXTENT, (int(left), 0, int(right), height))
+        digitImages.append(digitImage)
+        left = right + digitSpacing
+    parser.addStep("Extracted digits.", digitImages)
 
     return image
 
 def extractBlackArea(parser, image, bl, br, tl, tr):
     width, height = image.size
-    bl = list(bl)
+    l = list(bl)
     br = list(br)
     tl = list(tl)
     tr = list(tr)
@@ -259,7 +283,7 @@ def extractBlackArea(parser, image, bl, br, tl, tr):
     draw.line((0, bottom, width-1, bottom), fill=color, width=5)
     draw.line((left, 0, left, height-1), fill=color, width=5)
     draw.line((right, 0, right, height-1), fill=color, width=5)
-    parser.addStep("Found black area boundaries.", markedImage)
+    parser.addStep("Found black area boundaries.", [markedImage])
 
     image = image.transform((right-left, bottom-top), Image.EXTENT, (left, top, right, bottom))
     return image
@@ -324,23 +348,24 @@ class Parser(object):
 
         self.steps = []
 
-    def addStep(self, description, postStepImage):
+    def addStep(self, description, postStepImages):
         stepNumber = len(self.steps) + 1
-        self.steps.append((description, postStepImage))
+        self.steps.append((description, postStepImages))
 
     def generateHtml(self, einfo=None):
         index = open(self.htmlFile, 'w')
         index.write("""<html>
 <body>
 """)
-        for i, (description, image) in enumerate(self.steps):
+        for i, (description, images) in enumerate(self.steps):
             stepNumber = i + 1
 
-            relativeImageFileName = "step%s.jpg" % stepNumber
-            absoluteImageFileName = os.path.join(self.dataDir, relativeImageFileName)
             index.write("<h2>%s. %s</h2>\n" % ( stepNumber, description ))
-            index.write("<img src='%s'/>\n" % ( relativeImageFileName ))
-            image.save(absoluteImageFileName)
+            for nthImage, image in enumerate(images):
+                relativeImageFileName = "step%s-%s.jpg" % ( stepNumber, nthImage )
+                absoluteImageFileName = os.path.join(self.dataDir, relativeImageFileName)
+                index.write("<img src='%s'/>\n" % ( relativeImageFileName ))
+                image.save(absoluteImageFileName)
 
         if einfo:
             index.write(cgitb.html(einfo))
@@ -385,7 +410,7 @@ def main():
     #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394667.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
-    print parser.value()
+    print parser.value(forceReparse=True)
     print parser.htmlFile
 
 if __name__ == "__main__":
