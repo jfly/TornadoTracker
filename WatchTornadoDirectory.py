@@ -15,28 +15,32 @@ def main():
     args = parser.parse_args()
 
     assert os.path.isdir(args.image_folder)
-    assert os.path.isdir(args.analyzed_folder)
+    if not os.path.isdir(args.analyzed_folder):
+        os.makedirs(args.analyzed_folder)
     indexHtmlFile = os.path.join(args.analyzed_folder, "index.html")
 
     class EventHandler(pyinotify.ProcessEvent):
         def process_IN_CREATE(self, event):
-            handleFile(event.pathname)
+            handleFile(event.pathname, forceReparse=True)
 
         def process_IN_DELETE(self, event):
             pass
 
         def process_IN_MODIFY(self, event):
-            handleFile(event.pathname)
+            handleFile(event.pathname, forceReparse=True)
+
+        def process_IN_MOVED_TO(self, event):
+            handleFile(event.pathname, forceReparse=True)
 
 
     parserByTimestamp = {}
-    def handleFile(fileName):
+    def handleFile(fileName, forceReparse=False):
         rest, ext = os.path.splitext(fileName)
         if ext != ".jpg":
             return
         parser = ParseTornado.Parser(fileName, args.analyzed_folder)
         parserByTimestamp[parser.timestamp] = parser
-        value = parser.value()
+        value = parser.value(forceReparse=forceReparse)
         if value is None:
             print "Failed to parse, see %s" % parser.htmlFile
         else:
@@ -112,7 +116,7 @@ table.gridtable tr.fail {
     wm = pyinotify.WatchManager()
     handler = EventHandler()
     notifier = pyinotify.Notifier(wm, handler)
-    mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY
+    mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY | pyinotify.IN_MOVED_TO
     wm.add_watch(args.image_folder, mask, quiet=False)
 
     # This is actually not racy. If a file is added while we're processing
