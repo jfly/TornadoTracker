@@ -374,26 +374,17 @@ class Parser(object):
 
 
 def main():
-    if len(sys.argv) == 1:
-        # straight up
-        fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365395374.jpg"
-        # yee rotated
-        #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394659.jpg"
-        # rotated other way (almost works, but flash screws up extractBlackArea())
-        #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394667.jpg"
+    analyzedDirectory = '/home/jeremy/tmp/'
+    # straight up
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365395374.jpg"
+    # yee rotated
+    #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394659.jpg"
+    # rotated other way (almost works, but flash screws up extractBlackArea())
+    #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394667.jpg"
 
-        """
-        fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365419927.jpg"
-        fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365421727.jpg"
-        fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365452509.jpg"
-        fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365452515.jpg"
-        fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365452531.jpg"
-        """
-    else:
-        fileName = sys.argv[1]
-
-    parser = Parser(fileName)
-    print parser.value(fileName)
+    parser = Parser(fileName, analyzedDirectory)
+    print parser.value()
+    print parser.htmlFile
 
 if __name__ == "__main__":
     main()
