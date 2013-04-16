@@ -238,37 +238,272 @@ def parse(parser, image):
         blackWhiten(digitImage)
         digitImages.append(digitImage)
         left = right + digitSpacing
-    percentages = []
-    for digitImage in digitImages:
-        percentages.append("%.2f" % getPercentageWhite(digitImage)) 
-    parser.addStep("Extracted digits (percentages white: %s)." % percentages, digitImages)
 
-    return 4242#<<<
+    parser.addStep("Extracted digits.", digitImages)
+
+    digitImages = [ di.copy() for di in digitImages ]
+    parsedDigits = []
+    for digitImage in digitImages:
+        parsedDigits.append(identifyDigit(digitImage))
+    numberStr = " ".join(str(d) for d in parsedDigits)
+    parser.addStep("Parsed digits: %s." % numberStr, digitImages)
+
+    numberStr = " ".join(str(d) for d in parsedDigits)
+
+    return parsedDigits
+
+class Digit(object):
+    def __init__(self, value, (width, height), onMarks, offMarks):
+        self.value = value
+        self.width = width
+        self.height = height
+        self.onMarks = onMarks
+        self.offMarks = offMarks
+
+    def matches(self, image):
+        pixdata = image.load()
+        width, height = image.size
+        
+        def on(pixel):
+            allBlack = sum(pixel) == 0
+            allWhite = sum(pixel) == 3*255
+            assert allBlack ^ allWhite
+            return allWhite
+
+        def perfectMatch(offsetX, offsetY, mark=False):
+            for shouldOn, marks in [ (True, self.onMarks), (False, self.offMarks) ]:
+                for x, y in marks:
+                    x = int(1.0*x/self.width * width) + offsetX
+                    y = int(1.0*y/self.height * height) + offsetY
+                    if not ( 0 <= x < width) or not ( 0 <= y < height ):
+                        return False
+                    
+                    if mark:
+                        color = (255, 0, 0) if shouldOn else (0, 255, 0)
+                        pixdata[x, y] = color
+                    else:
+                        if shouldOn != on(pixdata[x, y]):
+                            return False
+            return True
+
+        wiggleX = int(math.ceil(0.05*width))
+        wiggleY = int(math.ceil(0.2*height))
+        for offsetX in range(-wiggleX, wiggleX):
+            for offsetY in range(-wiggleY, wiggleY):
+                if perfectMatch(offsetX, offsetY):
+                    perfectMatch(offsetX, offsetY, mark=True)
+                    return True
+        return False
+
+canonicalZero = Digit(
+    0,
+    (74, 113),
+    onMarks=(
+        (37, 27), (37, 85),
+        (23, 34), (23, 44), (23, 54), (23, 64), (23, 75),
+        (51, 34), (51, 44), (51, 54), (51, 64), (51, 75),
+        (23, 51), (55, 51),
+    ),
+    offMarks=(
+        (39, 56),
+        (37, 56),
+        (35, 56),
+        (33, 56),
+    )
+)
+
+canonicalOne = Digit(
+    1,
+    (74, 113),
+    onMarks=(
+        (40, 25),
+        (40, 35),
+        (40, 45),
+        (40, 55),
+        (40, 65),
+        (40, 75),
+    ),
+    offMarks=(
+        (25, 25), # now we won't think a 7 is a 1
+    )
+)
+
+canonicalTwo = Digit(
+    2,
+    (72, 111),
+    onMarks=(
+        (23, 90), (33, 90), (44, 90), (52, 90),
+        (29, 81), (35, 75), (41, 71), (47, 64), (52, 58), (53, 49),
+        (50, 43), (47, 39), (39, 36), (32, 38),
+    ),
+    offMarks=(
+        (23, 51),
+    )
+)
+
+canonicalThree = Digit(
+    3,
+    (74, 113),
+    onMarks=(
+        (37, 27), (37, 85),
+        (45, 30),
+        (23, 34), (23, 75),
+        (51, 34), (51, 75),
+        (55, 51),
+    ),
+    offMarks=(
+        (23, 45),
+        (23, 50),
+        (23, 55),
+    )
+)
+
+# TODO - this seems silly
+otherCanonicalThree = Digit(
+    3,
+    (72, 112),
+    onMarks=(
+        (28, 40), (34, 36), (43, 37), (51, 42), (51, 54), (50, 62), (52, 70), (53, 81), 
+        (48, 85), (39, 88), (30, 87), (24, 82),
+    ),
+    offMarks=(
+        (23, 51),
+    )
+)
+
+canonicalFour = Digit(
+    4,
+    (74, 113),
+    onMarks=(
+        (49, 28), (49, 38), (49, 48), (49, 58), (49, 68), (49, 78), (49, 83),
+        (58, 70), (48, 70), (38, 70), (28, 70), (24, 70),
+        (29, 59), (33, 53), (38, 45), (43, 37), (45, 32),
+    ),
+    offMarks=(
+        (23, 51),
+    )
+)
+
+canonicalFive = Digit(
+    5,
+    (74, 113),
+    onMarks=(
+        (23, 34), (43, 34),
+        (23, 43),
+        (23, 57), (43, 57),
+                  (52, 71),
+        (23, 83), (43, 89),
+    ),
+    offMarks=(
+        (50, 45),
+    )
+)
+
+canonicalSix = Digit(
+    6,
+    (74, 113),
+    onMarks=(
+        (37, 27), (37, 85),
+        (23, 34), (23, 55), (23, 60), (23, 65), (23, 70), (23, 75),
+        (51, 75),
+        (37, 56),
+        (19, 60),
+    ),
+    offMarks=(
+        (51, 40),
+    )
+)
+
+canonicalSeven = Digit(
+    7,
+    (72, 111),
+    onMarks=(
+        (30, 22), (47, 24),
+        (48, 37),
+        (44, 50),
+        (42, 58),
+        (41, 66),
+        (38, 77),
+    ),
+    offMarks=()
+)
+
+canonicalEight = Digit(
+    8,
+    (74, 113),
+    onMarks=(
+        (35, 29),
+        (37, 27), (37, 85),
+        (25, 34), (25, 44), (25, 54), (25, 64), (20, 75),
+        (56, 34), (63, 75),
+        (37, 50), (39, 50), (42, 50),
+        (37, 55), (39, 55), (42, 55),
+        (37, 60), (39, 60), (42, 60),
+        (50, 45),
+        (25, 51),
+        (56, 40), (58, 44), (56, 48), (56, 54),
+    ),
+    offMarks=()
+)
+
+canonicalNine = Digit(
+    9,
+    (72, 111),
+    onMarks=(
+        (40, 33),
+        (50, 38), (55, 43),
+        (26, 47), (55, 47),
+        (52, 60), (35, 60),
+        (54, 78),
+        (42, 86),
+        (42, 88),
+        (35, 95), (42, 95), (50, 95), (55, 92), (60, 90),
+        (57, 85), (57, 80), (57, 75), (57, 70), (57, 65),
+    ),
+    offMarks=(
+        (20, 69),
+    )
+)
+
+canonicalDigits = (
+    # These are rougly sorted in decreasing "difficulty" to match, because
+    # we take the first match we find.
+    canonicalEight,
+    canonicalZero,
+
+    canonicalTwo,
+    canonicalThree,
+    otherCanonicalThree,
+    canonicalSix,
+
+    canonicalNine,
+    canonicalFive,
+    canonicalFour,
+    canonicalSeven,
+
+    canonicalOne,
+)
+def identifyDigit(digitImage):
+    value = None
+    for canonicalDigit in canonicalDigits:
+        if canonicalDigit.matches(digitImage):
+            value = canonicalDigit.value
+            break
+    return value
 
 def blackWhiten(image):
     pixdata = image.load()
     width, height = image.size
 
+    MAGIC_WHITENESS_THRESHOLD = 145
     pixels = []
     for x in range(width):
         for y in range(height):
             r, g, b = pixdata[x, y]
-            if r + g + b < 3*150:
+            if r + g + b < 3*MAGIC_WHITENESS_THRESHOLD:
                 pixdata[x, y] = (0, 0, 0)
             else:
                 pixdata[x, y] = (255, 255, 255)
-
-def getPercentageWhite(image):
-    pixdata = image.load()
-    width, height = image.size
-    whiteCount = 0
-    for x in range(width):
-        for y in range(height):
-            white = pixdata[x, y]
-            if white:
-                whiteCount += 1
-
-    return 100.0*whiteCount/(width*height)
 
 def extractBlackArea(parser, image, bl, br, tl, tr):
     width, height = image.size
@@ -365,12 +600,23 @@ def applyAffineTransform(image, angle, boundaryPoints):
 
     return ( image.transform((w, h), Image.AFFINE, matrix), transform2 )
 
+def parsePrecomputedTextFile(fileName, strict=False):
+    lines = open(fileName).read().split("\n")
+    try:
+        return [ None if line == repr(None) else int(line) for line in lines if line ]
+    except ValueError:
+        print "%s isn't an integer!" % line
+        if strict:
+            raise
+        return [ None ]
+
 class Parser(object):
     def __init__(self, imageFileName, analyzedDirectory):
         self.imageFileName = os.path.abspath(imageFileName)
 
         self.timestamp, ext = os.path.splitext(os.path.basename(imageFileName))
         self.timestamp = int(self.timestamp)
+        self.trainingFile = os.path.join(os.path.dirname(imageFileName), str(self.timestamp) + ".training")
         self.dataDir = os.path.join(analyzedDirectory, str(self.timestamp))
 
         self.htmlFile = os.path.join(self.dataDir, 'index.html')
@@ -378,14 +624,12 @@ class Parser(object):
 
         if os.path.exists(self.dataDir):
             if os.path.isfile(self.parsedValueTextFile):
-                firstLine = open(self.parsedValueTextFile).readline()
-                try:
-                    self.value_ = int(firstLine)
-                except ValueError:
-                    print "%s isn't an integer!" % firstLine
-                    self.value_ = None
+                self.digits_ = parsePrecomputedTextFile(self.parsedValueTextFile)
             else:
-                self.value_ = None
+                self.digits_ = [ None ]
+
+        if os.path.isfile(self.trainingFile):
+            self.correctDigits_ = parsePrecomputedTextFile(self.trainingFile, strict=True)
 
         self.steps = []
 
@@ -394,7 +638,7 @@ class Parser(object):
         self.steps.append((description, postStepImages))
 
     def stepImage(self, stepNumber, nthImage=0):
-        imageFileName = "step%s-%s.jpg" % ( stepNumber, nthImage )
+        imageFileName = "step%s-%s.png" % ( stepNumber, nthImage )
         absoluteImageFileName = os.path.join(self.dataDir, imageFileName)
         return absoluteImageFileName
 
@@ -422,9 +666,9 @@ class Parser(object):
 """)
         index.close()
 
-    def value(self, forceReparse=False):
-        if not forceReparse and hasattr(self, 'value_'):
-            return self.value_
+    def digits(self, forceReparse=False):
+        if not forceReparse and hasattr(self, 'digits_'):
+            return self.digits_
 
         einfo = None
         try:
@@ -432,34 +676,33 @@ class Parser(object):
                 shutil.rmtree(self.dataDir)
             os.makedirs(self.dataDir)
             image = Image.open(self.imageFileName)
-            self.value_ = parse(self, image)
+            self.digits_ = parse(self, image)
         except:
-            self.value_ = None
+            self.digits_ = [ None ]
             einfo = sys.exc_info()
         else:
             f = open(self.parsedValueTextFile, "w")
-            f.write("%s\n" % self.value_)
+            f.write("%s\n" % "\n".join(str(d) for d in self.digits_))
             f.close()
 
         self.generateHtml(einfo)
-        return self.value_
+
+        return self.digits_
+
+    def failedTest(self):
+        assert hasattr(self, 'digits_')
+        if hasattr(self, 'correctDigits_'):
+            if self.correctDigits_ != self.digits_:
+                return True
+        return False
 
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    # straight up
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365395374.jpg"
-    # sharper version of same number
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394548.jpg"
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365925503.jpg"
-
-    # yee rotated
-    #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394659.jpg"
-    # rotated other way (almost works, but flash screws up extractBlackArea())
-    #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394667.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365918238.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
-    print parser.value(forceReparse=True)
+    print parser.digits(forceReparse=True)
     print parser.htmlFile
 
 if __name__ == "__main__":

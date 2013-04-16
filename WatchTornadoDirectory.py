@@ -40,8 +40,8 @@ def main():
             return
         parser = ParseTornado.Parser(fileName, args.analyzed_folder)
         parserByTimestamp[parser.timestamp] = parser
-        value = parser.value(forceReparse=forceReparse)
-        if value is None:
+        digits = parser.digits(forceReparse=forceReparse)
+        if any(d is None for d in digits):
             print "Failed to parse, see %s" % parser.htmlFile
         else:
             print "Successfully parsed, see %s" % parser.htmlFile
@@ -56,15 +56,17 @@ def main():
         table += "</tr>\n"
         table += "</thead>\n"
         for timestamp, parser in sorted(parserByTimestamp.iteritems()):
-            val = parser.value()
-            if val is None:
+            digits = parser.digits()
+            if parser.failedTest():
+                table += "<tr class='failTest'>\n"
+            elif any(d is None for d in digits):
                 table += "<tr class='fail'>\n"
             else:
                 table += "<tr class='success'>\n"
             link = os.path.relpath(parser.htmlFile, args.analyzed_folder)
             image = os.path.relpath(parser.stepImage(8), args.analyzed_folder)
             prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
-            table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img height='20px' src='%s'/></td>\n" % ( link, prettyDate, parser.value(), image )
+            table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img height='20px' src='%s'/></td>\n" % ( link, prettyDate, "".join(str(d) for d in digits), image )
             table += "</tr>\n"
 
         table += "</tbody>\n</table>\n"
@@ -98,6 +100,9 @@ table.gridtable tr.success {
 }
 
 table.gridtable tr.fail {
+}
+
+table.gridtable tr.failTest {
     background-color: red;
 }
 </style>
