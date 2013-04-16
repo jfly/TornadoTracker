@@ -66,8 +66,9 @@ def resize(image):
     image = image.resize((width, height))
     return image, originalToThumbnailRatio
 
-def findPixels(size, pixdata, color, colorDelta):
-    width, height = size
+def findPixels(image, color, colorDelta):
+    pixdata = image.load() # http://stackoverflow.com/questions/12228829/python-image-library-make-area-of-image-transparent#comment16387831_12229109
+    width, height = image.size
 
     pixels = []
     for x in range(width):
@@ -97,17 +98,19 @@ def parse(parser, image):
     # When flash is involved, green and red can look more like these two
     cameraRed = ( 196, 75, 129 )
     cameraGreen = ( 80, 161, 168 )
+    # Another green
+    anotherGreen = ( 28, 133, 119 )
 
-    pixdata = image.load() # http://stackoverflow.com/questions/12228829/python-image-library-make-area-of-image-transparent#comment16387831_12229109
-    trueRedPixels = findPixels(image.size, pixdata, trueRed, 250)
-    cameraRedPixels = findPixels(image.size, pixdata, cameraRed, 50)
+    trueRedPixels = findPixels(image, trueRed, 250)
+    cameraRedPixels = findPixels(image, cameraRed, 50)
     redPixels = set(trueRedPixels) | set(cameraRedPixels)
 
-    trueGreenPixels = findPixels(image.size, pixdata, trueGreen, 270)
-    cameraGreenPixels = findPixels(image.size, pixdata, cameraGreen, 50)
-    greenPixels = set(trueGreenPixels) | set(cameraGreenPixels)
+    trueGreenPixels = findPixels(image, trueGreen, 270)
+    cameraGreenPixels = findPixels(image, cameraGreen, 50)
+    anotherGreenPixels = findPixels(image, anotherGreen, 50)
+    greenPixels = set(trueGreenPixels) | set(cameraGreenPixels) | set(anotherGreenPixels)
 
-    groupDiameter = 0.1*max(*image.size)
+    groupDiameter = 0.08*max(*image.size)
     redGroups = findGroups(redPixels, groupDiameter)
     redGroups.sort(key=lambda g: len(g.points))
     greenGroups = findGroups(greenPixels, groupDiameter)
@@ -123,7 +126,9 @@ def parse(parser, image):
     redGroups = redGroups[-2:]
     greenGroups = greenGroups[-2:]
 
+
     markPixelsImage = image.copy()
+
     for i, redGroup in enumerate(redGroups):
         markPoint(markPixelsImage, redGroup.center, color='red', size=groupDiameter, strokeWidth=2)
     for i, greenGroup in enumerate(greenGroups):
@@ -167,8 +172,10 @@ def parse(parser, image):
     draw.line((b2[0], b2[1], t2[0], t2[1]), fill='red', width=5)
     parser.addStep("Identified a vertical edge (orange) that needs to be rotated %s degrees counter clockwise, and a vertical edge (red) that needs to be rotated %s degrees counter clockwise. Averaging angles is <a href='http://en.wikipedia.org/wiki/Circular_mean'>hard</a>, but I'm going to give it a shot because because I'm a hard worker. Going to rotate %s degrees ccw (+ magic offset of %s degree(s))." % (ccwAngleToRotate1, ccwAngleToRotate2, ccwAngleToRotate, magicOffset), [markEdgesImage])
 
-    b1, b2 = [ scale(originalToThumbnailRatio, g.center) for g in redGroups ]
-    t1, t2 = [ scale(originalToThumbnailRatio, g.center) for g in greenGroups ]
+    b1 = scale(originalToThumbnailRatio, b1)
+    b2 = scale(originalToThumbnailRatio, b2)
+    t1 = scale(originalToThumbnailRatio, t1)
+    t2 = scale(originalToThumbnailRatio, t2)
     image = originalImage
 
     image, transform = applyAffineTransform(image, ccwAngleToRotate + magicOffset, [b1, b2, t1, t2])
@@ -179,6 +186,7 @@ def parse(parser, image):
     tr = transform(*t2)
 
     if bl[0] > br[0]:
+        assert tl[0] > tr[0]
         # Swap if necessary so that bl is at the bottom left
         bl, br = br, bl
         tl, tr = tr, tl
@@ -218,6 +226,7 @@ def parse(parser, image):
     parser.addStep("Cropped out excess black.", [image])
 
     width, height = image.size
+    assert 4.4 <= 1.0*width/height <= 4.8
     digitWidth = 0.14*width
     digitSpacing = (width - 5*digitWidth)/4.0
     left = 0
@@ -226,7 +235,7 @@ def parse(parser, image):
         digitImage = image.copy()
         right = left + digitWidth
         digitImage = digitImage.transform((int(digitWidth), height), Image.EXTENT, (int(left), 0, int(right), height))
-        digitImage = digitImage.convert('1') # convert to black and white
+        blackWhiten(digitImage)
         digitImages.append(digitImage)
         left = right + digitSpacing
     percentages = []
@@ -234,8 +243,20 @@ def parse(parser, image):
         percentages.append("%.2f" % getPercentageWhite(digitImage)) 
     parser.addStep("Extracted digits (percentages white: %s)." % percentages, digitImages)
 
-
     return 4242#<<<
+
+def blackWhiten(image):
+    pixdata = image.load()
+    width, height = image.size
+
+    pixels = []
+    for x in range(width):
+        for y in range(height):
+            r, g, b = pixdata[x, y]
+            if r + g + b < 3*150:
+                pixdata[x, y] = (0, 0, 0)
+            else:
+                pixdata[x, y] = (255, 255, 255)
 
 def getPercentageWhite(image):
     pixdata = image.load()
@@ -257,10 +278,10 @@ def extractBlackArea(parser, image, bl, br, tl, tr):
     tr = list(tr)
     pixdata = image.load()
 
-    left = max(tl[0], bl[0])
-    right = min(tr[0], br[0])
-    top = max(tl[1], tr[1])
-    bottom = min(bl[1], br[1])
+    left = int(max(tl[0], bl[0]))
+    right = int(min(tr[0], br[0]))
+    top = int(max(tl[1], tr[1]))
+    bottom = int(min(bl[1], br[1]))
     def moveUntilMostlyBlack(i, direction, isRow):
         if isRow:
             def average(y):
@@ -279,7 +300,7 @@ def extractBlackArea(parser, image, bl, br, tl, tr):
         while lower <= i <= upper:
             ave = average(i)
             if ave < .75*firstAve:
-                return i
+                break
             i += direction
 
         return i
@@ -288,6 +309,8 @@ def extractBlackArea(parser, image, bl, br, tl, tr):
     bottom = moveUntilMostlyBlack(bottom, -1, isRow=True)
     left = moveUntilMostlyBlack(left, 1, isRow=False)
     right = moveUntilMostlyBlack(right, -1, isRow=False)
+    assert 0 <= top <= bottom
+    assert 0 <= left <= right
 
     left = int(left)
     right = int(right)
@@ -428,6 +451,7 @@ def main():
     fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365395374.jpg"
     # sharper version of same number
     fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394548.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365925503.jpg"
 
     # yee rotated
     #fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365394659.jpg"
