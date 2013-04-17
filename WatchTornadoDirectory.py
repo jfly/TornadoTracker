@@ -147,8 +147,7 @@ $(function() {
             },
             
             series : [{
-                name : 'AAPL',
-                type: 'area',
+                name : 'presses',
             data: %s,
                 gapSize: 5,
                 tooltip: {
