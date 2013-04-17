@@ -149,7 +149,7 @@ $(function() {
             series : [{
                 name : 'presses',
                 data: %s,
-                gapSize: 5,
+                gapSize: null,
                 tooltip: {
                     valueDecimals: 0
                 },
