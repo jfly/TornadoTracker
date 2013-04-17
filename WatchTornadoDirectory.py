@@ -55,6 +55,7 @@ def main():
         table += "<th>Date</th><th>Value</th><th></th>\n"
         table += "</tr>\n"
         table += "</thead>\n"
+        data = []
         for timestamp, parser in sorted(parserByTimestamp.iteritems()):
             digits = parser.digits()
             if parser.failedTest():
@@ -63,10 +64,12 @@ def main():
                 table += "<tr class='fail'>\n"
             else:
                 table += "<tr class='success'>\n"
+                value = int("".join(str(d) for d in digits))
+                data.append([timestamp*1000, value])
             link = os.path.relpath(parser.htmlFile, args.analyzed_folder)
             image = os.path.relpath(parser.stepImage(8), args.analyzed_folder)
             prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
-            table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img height='20px' src='%s'/></td>\n" % ( link, prettyDate, "".join(str(d) for d in digits), image )
+            table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img style='height: 20px;' src='%s'/></td>\n" % ( link, prettyDate, "".join(str(d) for d in digits), image )
             table += "</tr>\n"
 
         table += "</tbody>\n</table>\n"
@@ -106,13 +109,74 @@ table.gridtable tr.failTest {
     background-color: red;
 }
 </style>
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="http://code.highcharts.com/stock/highstock.js"></script>
+<script src="http://code.highcharts.com/stock/modules/exporting.js"></script>
+<script type="text/javascript">
+$(function() {
+
+            Highcharts.setOptions({ global : { useUTC : false } });
+            $('#container').highcharts('StockChart', {
+            
+
+            title: {
+                text: 'Number of coin op presses'
+            },
+            
+            xAxis: {
+                gapGridLineWidth: 0
+            },
+            
+            rangeSelector : {
+                buttons : [{
+                    type : 'hour',
+                    count : 1,
+                    text : '1h'
+                }, {
+                    type : 'day',
+                    count : 1,
+                    text : '1D'
+                }, {
+                    type : 'all',
+                    count : 1,
+                    text : 'All'
+                }],
+                selected : 1,
+                inputEnabled : false
+            },
+            
+            series : [{
+                name : 'AAPL',
+                type: 'area',
+            data: %s,
+                gapSize: 5,
+                tooltip: {
+                    valueDecimals: 0
+                },
+                /*fillColor : {
+                    linearGradient : {
+                        x1: 0, 
+                        y1: 0, 
+                        x2: 0, 
+                        y2: 1
+                    },
+                    stops : [[0, Highcharts.getOptions().colors[0]], [1, 'rgba(0,0,0,0)']]
+                },*/
+                threshold: null
+            }]
+        });
+
+});
+</script>
 </head>
 <body>
 <p>Last updated %s</p>
+<div id="container"></div>
 %s
 </body>
 </html>
-""" % ( datetime.datetime.now().ctime(), table )
+""" % ( repr(data), datetime.datetime.now().ctime(), table )
         f = open(indexHtmlFile, 'w')
         f.write(html)
         f.close()
