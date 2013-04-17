@@ -108,6 +108,10 @@ table.gridtable tr.fail {
 table.gridtable tr.failTest {
     background-color: red;
 }
+
+#graphContainer {
+    height: 100%%;
+}
 </style>
 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
@@ -115,64 +119,89 @@ table.gridtable tr.failTest {
 <script src="http://code.highcharts.com/stock/modules/exporting.js"></script>
 <script type="text/javascript">
 $(function() {
-
-            Highcharts.setOptions({ global : { useUTC : false } });
-            $('#container').highcharts('StockChart', {
-            
-
-            title: {
-                text: 'Number of coin op presses'
+    Highcharts.setOptions({
+        global: {
+            useUTC: false
+        },
+        lang: {
+            showDetailsTitle: 'Show Details',
+        }
+    });
+    var highchart = $('#graphContainer').highcharts('StockChart', {
+        title: {
+            text: 'Number of coin op presses'
+        },
+        
+        xAxis: {
+            gapGridLineWidth: 1
+        },
+        
+        rangeSelector : {
+            buttons : [{
+                type : 'hour',
+                count : 1,
+                text : '1h'
+            }, {
+                type : 'day',
+                count : 1,
+                text : '1D'
+            }, {
+                type : 'all',
+                count : 1,
+                text : 'All'
+            }],
+            selected : 2,
+            inputEnabled : false
+        },
+        
+        series: [{
+            name : 'presses',
+            data: %s,
+            gapSize: null,
+            tooltip: {
+                valueDecimals: 0
             },
-            
-            xAxis: {
-                gapGridLineWidth: 1
-            },
-            
-            rangeSelector : {
-                buttons : [{
-                    type : 'hour',
-                    count : 1,
-                    text : '1h'
-                }, {
-                    type : 'day',
-                    count : 1,
-                    text : '1D'
-                }, {
-                    type : 'all',
-                    count : 1,
-                    text : 'All'
-                }],
-                selected : 2,
-                inputEnabled : false
-            },
-            
-            series : [{
-                name : 'presses',
-                data: %s,
-                gapSize: null,
-                tooltip: {
-                    valueDecimals: 0
-                },
-                /*fillColor : {
-                    linearGradient : {
-                        x1: 0, 
-                        y1: 0, 
-                        x2: 0, 
-                        y2: 1
+            threshold: null
+        }],
+        exporting: {
+            buttons: {
+                'toggleDetailsButton': {
+                    _id: 'toggleDetailsButton',
+                    x: -62,
+                    symbolFill: '#B5C9DF',
+                    hoverSymbolFill: '#779ABF',
+                    onclick: function() {
+                        toggleDetails();
+                        // Adding/removing details may induce/remove a vertical
+                        // scrollbar. Fortunately, highcharts listens for window
+                        // resizes to reflow the table. Unfortunately, we can't
+                        // call that code directly, but jquery lets us tickle it.
+                        $(window).trigger('resize');
                     },
-                    stops : [[0, Highcharts.getOptions().colors[0]], [1, 'rgba(0,0,0,0)']]
-                },*/
-                threshold: null
-            }]
-        });
-
+                    _titleKey: "showDetailsTitle",
+                    text: "Toggle Details"
+                }
+            }
+        }
+    });
+    function toggleDetails() {
+        var sheetContainer = document.getElementById("sheetContainer");
+        if(sheetContainer.style.display == '') {
+            sheetContainer.style.display = 'none';
+        } else {
+            sheetContainer.style.display = '';
+        }
+    }
+    toggleDetails(); // hide details
 });
 </script>
 </head>
 <body>
+<div id="graphContainer"></div>
+<div id="sheetContainer">
 <p>Last updated %s</p>
-<div id="container"></div>
 %s
+</div>
 </body>
 </html>
 """ % ( repr(data), datetime.datetime.now().ctime(), table )
