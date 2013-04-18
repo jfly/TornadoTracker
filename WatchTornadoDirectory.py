@@ -133,7 +133,8 @@ $(function() {
         },
         
         xAxis: {
-            gapGridLineWidth: 1
+            gapGridLineWidth: 1,
+            ordinal: false
         },
         
         rangeSelector : {
