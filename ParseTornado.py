@@ -345,7 +345,7 @@ canonicalThree = Digit(
     3,
     (74, 113),
     onMarks=(
-        (37, 27), (37, 85),
+        (37, 27), (34, 81), (37, 85),
         (45, 30),
         (23, 34), (23, 75),
         (51, 34), (51, 75),
@@ -418,7 +418,7 @@ canonicalSeven = Digit(
     7,
     (72, 111),
     onMarks=(
-        (30, 22), (47, 24),
+        (30, 22), (30, 24), (47, 24),
         (48, 37),
         (44, 50),
         (42, 58),
@@ -699,7 +699,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366423081.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365800762.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
