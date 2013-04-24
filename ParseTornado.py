@@ -434,7 +434,7 @@ canonicalEight = Digit(
     onMarks=(
         (35, 29),
         (37, 27), (37, 85),
-        (25, 34), (25, 44), (25, 54), (25, 64), (20, 75),
+        (22, 34), (22, 44), (25, 54), (25, 64), (20, 75),
         (56, 34), (63, 75),
         (37, 50), (39, 50), (42, 50),
         (37, 55), (39, 55), (42, 55),
@@ -699,7 +699,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365918238.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366423081.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
