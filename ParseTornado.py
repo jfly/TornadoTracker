@@ -293,6 +293,9 @@ class Digit(object):
                 if perfectMatch(offsetX, offsetY):
                     perfectMatch(offsetX, offsetY, mark=True)
                     return True
+        offsetX = -6#<<<
+        offsetY = -4#<<<
+        perfectMatch(offsetX, offsetY, mark=True)#<<<
         return False
 
 canonicalZero = Digit(
@@ -456,7 +459,7 @@ canonicalNine = Digit(
         (50, 38), (55, 43),
         (26, 47), (55, 47),
         (52, 60), (35, 60),
-        (42, 78), (54, 78), 
+        (54, 78), 
         (42, 86),
         (42, 88),
         (35, 95), (42, 95), (50, 95), (55, 92), (60, 90),
@@ -485,6 +488,7 @@ canonicalDigits = (
 
     canonicalOne,
 )
+canonicalDigits=[canonicalNine]#<<<
 def identifyDigit(digitImage):
     value = None
     for canonicalDigit in canonicalDigits:
@@ -701,7 +705,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366429643.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365892563.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
