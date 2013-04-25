@@ -362,12 +362,12 @@ canonicalThree = Digit(
 otherCanonicalThree = Digit(
     3,
     (72, 112),
-    onMarks=(
+    onMarks=[
         (28, 40), (34, 36), (43, 37),
         (51, 42), (51, 43), (51, 44), (51, 45), (51, 46), (51, 47), (51, 48), (51, 49), (51, 50), (51, 51), (51, 52), (51, 53), (51, 54),
         (50, 62), (52, 70), (53, 81), 
         (48, 85), (39, 88), (30, 87), (24, 82),
-    ),
+    ] + [ (51, y) for y in range(70, 75) ],
     offMarks=(
         (23, 51),
     )
@@ -451,7 +451,7 @@ canonicalEight = Digit(
 canonicalNine = Digit(
     9,
     (72, 111),
-    onMarks=(
+    onMarks=[
         (40, 33),
         (50, 38), (55, 43),
         (26, 47), (55, 47),
@@ -460,8 +460,9 @@ canonicalNine = Digit(
         (42, 86),
         (42, 88),
         (35, 95), (42, 95), (50, 95), (55, 92), (60, 90),
-        (57, 85), (57, 80), (57, 79), (57, 78), (57, 77), (57, 75), (57, 75), (57, 70), (57, 65),
-    ),
+    ] + [ (57, y) for y in range(65, 85) ] + 
+        [ (53, y) for y in range(65, 85) ] + 
+        [ (54, y) for y in range(38, 65) ],
     offMarks=(
         (20, 69),
     )
@@ -701,7 +702,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366000773.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366397843.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
