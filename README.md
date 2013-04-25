@@ -1,1 +1,1 @@
-Foosball rocks
+Foosball rocks.
