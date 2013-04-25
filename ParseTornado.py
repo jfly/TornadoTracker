@@ -363,7 +363,7 @@ otherCanonicalThree = Digit(
     3,
     (72, 112),
     onMarks=(
-        (28, 40), (34, 36), (43, 37), (51, 42), (51, 54), (50, 62), (52, 70), (53, 81), 
+        (28, 40), (34, 36), (43, 37), (51, 42), (51, 44), (51, 46), (51, 48), (51, 50), (51, 52), (51, 54), (50, 62), (52, 70), (53, 81), 
         (48, 85), (39, 88), (30, 87), (24, 82),
     ),
     offMarks=(
@@ -454,7 +454,7 @@ canonicalNine = Digit(
         (50, 38), (55, 43),
         (26, 47), (55, 47),
         (52, 60), (35, 60),
-        (54, 78),
+        (42, 78), (54, 78), 
         (42, 86),
         (42, 88),
         (35, 95), (42, 95), (50, 95), (55, 92), (60, 90),
@@ -699,7 +699,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365800762.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366015174.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
