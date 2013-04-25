@@ -34,7 +34,7 @@ def main():
 
 
     parserByTimestamp = {}
-    def handleFile(fileName, forceReparse=False):
+    def handleFile(fileName, forceReparse=False, skipGenerateIndex=False):
         rest, ext = os.path.splitext(fileName)
         if ext != ".jpg":
             return
@@ -46,7 +46,8 @@ def main():
         else:
             print "Successfully parsed, see %s" % parser.htmlFile
 
-        generateHtml()
+        if not skipGenerateIndex:
+            generateHtml()
 
     def generateHtml():
         table = "<table class='gridtable'>\n"
@@ -222,7 +223,8 @@ $(function() {
     # all the files already present, we'll still be notified once we
     # get around to calling notifier.loop().
     for f in sorted(os.listdir(args.image_folder)):
-        handleFile(os.path.join(args.image_folder, f))
+        handleFile(os.path.join(args.image_folder, f), skipGenerateIndex=True)
+    generateHtml()
 
 
     print "\nNow watching directory %s\n" % args.image_folder
