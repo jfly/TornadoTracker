@@ -333,7 +333,7 @@ canonicalTwo = Digit(
     (72, 111),
     onMarks=(
         (23, 90), (33, 90), (44, 90), (52, 90),
-        (29, 81), (35, 75), (41, 71), (47, 64), (52, 58), (53, 49),
+        (29, 81), (35, 75), (37, 73), (41, 71), (47, 64), (52, 58), (53, 49),
         (50, 43), (47, 39), (39, 36), (32, 38),
     ),
     offMarks=(
@@ -702,7 +702,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366397843.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366873792.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
