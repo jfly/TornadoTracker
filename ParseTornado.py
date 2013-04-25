@@ -293,9 +293,6 @@ class Digit(object):
                 if perfectMatch(offsetX, offsetY):
                     perfectMatch(offsetX, offsetY, mark=True)
                     return True
-        offsetX = -6#<<<
-        offsetY = -4#<<<
-        perfectMatch(offsetX, offsetY, mark=True)#<<<
         return False
 
 canonicalZero = Digit(
@@ -488,7 +485,6 @@ canonicalDigits = (
 
     canonicalOne,
 )
-canonicalDigits=[canonicalNine]#<<<
 def identifyDigit(digitImage):
     value = None
     for canonicalDigit in canonicalDigits:
