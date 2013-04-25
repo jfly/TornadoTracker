@@ -460,7 +460,7 @@ canonicalNine = Digit(
         (42, 86),
         (42, 88),
         (35, 95), (42, 95), (50, 95), (55, 92), (60, 90),
-        (57, 85), (57, 80), (57, 75), (57, 70), (57, 65),
+        (57, 85), (57, 80), (57, 79), (57, 78), (57, 77), (57, 75), (57, 75), (57, 70), (57, 65),
     ),
     offMarks=(
         (20, 69),
@@ -701,7 +701,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1365892563.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366000773.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
