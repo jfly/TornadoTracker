@@ -286,7 +286,7 @@ class Digit(object):
                             return False
             return True
 
-        wiggleX = int(math.ceil(0.05*width))
+        wiggleX = int(math.ceil(0.06*width))
         wiggleY = int(math.ceil(0.2*height))
         for offsetX in range(-wiggleX, wiggleX):
             for offsetY in range(-wiggleY, wiggleY):
@@ -363,7 +363,9 @@ otherCanonicalThree = Digit(
     3,
     (72, 112),
     onMarks=(
-        (28, 40), (34, 36), (43, 37), (51, 42), (51, 44), (51, 46), (51, 48), (51, 50), (51, 52), (51, 54), (50, 62), (52, 70), (53, 81), 
+        (28, 40), (34, 36), (43, 37),
+        (51, 42), (51, 43), (51, 44), (51, 45), (51, 46), (51, 47), (51, 48), (51, 49), (51, 50), (51, 51), (51, 52), (51, 53), (51, 54),
+        (50, 62), (52, 70), (53, 81), 
         (48, 85), (39, 88), (30, 87), (24, 82),
     ),
     offMarks=(
@@ -699,7 +701,7 @@ class Parser(object):
 
 def main():
     analyzedDirectory = '/home/jeremy/tmp/'
-    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366015174.jpg"
+    fileName = "/home/jeremy/Dropbox/Apps/Tornado Tracker/1366429643.jpg"
 
     parser = Parser(fileName, analyzedDirectory)
     print parser.digits(forceReparse=True)
