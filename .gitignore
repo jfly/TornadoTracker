@@ -1,1 +1,4 @@
 *.pyc
+*.swp
+dropbox_token.txt
+dropbox_key_secret.txt

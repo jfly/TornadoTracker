@@ -1,81 +1,52 @@
-#!/usr/bin/env python
-
 import os
-import sys
+import time
 import argparse
 import datetime
-import pyinotify
-
 import ParseTornado
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('image_folder', type=str, help='folder to watch for image files')
-    parser.add_argument('analyzed_folder', type=str, help='folder to put analysis in')
-    args = parser.parse_args()
+from dropbox.client import DropboxClient
+from dropbox.session import DropboxSession
 
-    assert os.path.isdir(args.image_folder)
-    if not os.path.isdir(args.analyzed_folder):
-        os.makedirs(args.analyzed_folder)
-    indexHtmlFile = os.path.join(args.analyzed_folder, "index.html")
+TOKENS = 'dropbox_token.txt'
+APP_KEY_SECRET = 'dropbox_key_secret.txt'
+assert os.path.exists(APP_KEY_SECRET)
+APP_KEY, APP_SECRET = open(APP_KEY_SECRET).read().strip().split("\n")
 
-    class EventHandler(pyinotify.ProcessEvent):
-        def process_IN_CREATE(self, event):
-            handleFile(event.pathname, forceReparse=True)
+ACCESS_TYPE = 'app_folder'
 
-        def process_IN_DELETE(self, event):
-            pass
+DROPBOX_WAIT_PERDIOD = 60
 
-        def process_IN_MODIFY(self, event):
-            handleFile(event.pathname, forceReparse=True)
+analyzedFolder = None
+indexHtmlFile = None
+parserByTimestamp = {}
 
-        def process_IN_MOVED_TO(self, event):
-            handleFile(event.pathname, forceReparse=True)
-
-
-    parserByTimestamp = {}
-    def handleFile(fileName, forceReparse=False, skipGenerateIndex=False):
-        rest, ext = os.path.splitext(fileName)
-        if ext != ".jpg":
-            return
-        parser = ParseTornado.Parser(fileName, args.analyzed_folder)
-        parserByTimestamp[parser.timestamp] = parser
-        digits = parser.digits(forceReparse=forceReparse)
-        if any(d is None for d in digits):
-            print "Failed to parse, see %s" % parser.htmlFile
+def generateHtml():
+    table = "<table class='gridtable'>\n"
+    table += "<thead>\n"
+    table += "<tr>\n"
+    table += "<th>Date</th><th>Value</th><th></th>\n"
+    table += "</tr>\n"
+    table += "</thead>\n"
+    data = []
+    for timestamp, parser in sorted(parserByTimestamp.iteritems()):
+        digits = parser.digits()
+        if parser.failedTest():
+            table += "<tr class='failTest'>\n"
+        elif any(d is None for d in digits):
+            table += "<tr class='fail'>\n"
         else:
-            print "Successfully parsed, see %s" % parser.htmlFile
-
-        if not skipGenerateIndex:
-            generateHtml()
-
-    def generateHtml():
-        table = "<table class='gridtable'>\n"
-        table += "<thead>\n"
-        table += "<tr>\n"
-        table += "<th>Date</th><th>Value</th><th></th>\n"
+            table += "<tr class='success'>\n"
+            value = int("".join(str(d) for d in digits))
+            data.append([timestamp*1000, value])
+        link = os.path.relpath(parser.htmlFile, analyzedFolder)
+        image = os.path.relpath(parser.stepImage(8), analyzedFolder)
+        prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
+        table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img style='height: 20px;' src='%s'/></td>\n" % ( link, prettyDate, "".join(str(d) for d in digits), image )
         table += "</tr>\n"
-        table += "</thead>\n"
-        data = []
-        for timestamp, parser in sorted(parserByTimestamp.iteritems()):
-            digits = parser.digits()
-            if parser.failedTest():
-                table += "<tr class='failTest'>\n"
-            elif any(d is None for d in digits):
-                table += "<tr class='fail'>\n"
-            else:
-                table += "<tr class='success'>\n"
-                value = int("".join(str(d) for d in digits))
-                data.append([timestamp*1000, value])
-            link = os.path.relpath(parser.htmlFile, args.analyzed_folder)
-            image = os.path.relpath(parser.stepImage(8), args.analyzed_folder)
-            prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
-            table += "<td><a href='%s'>%s</a></td><td>%s</td><td><img style='height: 20px;' src='%s'/></td>\n" % ( link, prettyDate, "".join(str(d) for d in digits), image )
-            table += "</tr>\n"
 
-        table += "</tbody>\n</table>\n"
+    table += "</tbody>\n</table>\n"
 
-        html = """<html>
+    html = """<html>
 <head>
 <title>Tornado Tracker</title>
 <style type="text/css">
@@ -207,29 +178,135 @@ $(function() {
 </body>
 </html>
 """ % ( repr(data), datetime.datetime.now().ctime(), table )
-        f = open(indexHtmlFile, 'w')
-        f.write(html)
-        f.close()
-        print "Updated %s" % indexHtmlFile
+    f = open(indexHtmlFile, 'w')
+    f.write(html)
+    f.close()
+    print "Updated %s" % indexHtmlFile
+def rm(path):
+    if os.path.is_dir(path):
+        shutil.rmtree(path)
+    elif os.path.exists(path):
+        os.unlink(path)
 
+def handleEntries(client, entries, forceReparse=False):
+    for path, metadata in entries:
+        timestamp, ext = os.path.splitext(os.path.basename(path))
+        if ext == ".jpg":
+            parsedImageDir = os.path.join(analyzedFolder, timestamp)
+            if metadata is None:
+                rm(parsedImageDir)
+                continue
 
-    wm = pyinotify.WatchManager()
-    handler = EventHandler()
-    notifier = pyinotify.Notifier(wm, handler)
-    mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY | pyinotify.IN_MOVED_TO
-    wm.add_watch(args.image_folder, mask, quiet=False)
+            if metadata['is_dir']:
+                continue
 
-    # This is actually not racy. If a file is added while we're processing
-    # all the files already present, we'll still be notified once we
-    # get around to calling notifier.loop().
-    for f in sorted(os.listdir(args.image_folder)):
-        handleFile(os.path.join(args.image_folder, f), skipGenerateIndex=True)
-    generateHtml()
+            def imageFileGetter():
+                return client.get_file(path)
+            timestamp, correctDigits = ParseTornado.splitTimestampAndCorrect(path)
+            parser = ParseTornado.Parser(timestamp, imageFileGetter, analyzedFolder, correctDigits=correctDigits)
+            parserByTimestamp[parser.timestamp] = parser
+            digits = parser.digits(forceReparse=forceReparse)
+            if any(d is None for d in digits):
+                print "Failed to parse, see %s" % parser.htmlFile
+            else:
+                print "Successfully parsed, see %s" % parser.htmlFile
 
+            # TODO - add option to parse files on disk for quick testing purposes
+            skipGenerateIndex = False
+            if not skipGenerateIndex:
+                generateHtml()
 
-    print "\nNow watching directory %s\n" % args.image_folder
-    notifier.loop()
+def connectDropbox():
+    sess = DropboxSession(APP_KEY, APP_SECRET, ACCESS_TYPE)
 
+    if os.path.exists(TOKENS):
+        token_file = open(TOKENS)
+        token_key, token_secret = token_file.read().split('|')
+        token_file.close()
+        sess.set_token(token_key, token_secret)
+    else:
+        request_token = sess.obtain_request_token()
+
+        url = sess.build_authorize_url(request_token)
+
+        # Make the user sign in and authorize this token
+        print "url:", url
+        print "Please visit this website and press the 'Allow' button, then hit 'Enter' here."
+
+        raw_input()
+
+        # This will fail if the user didn't visit the above URL and hit 'Allow'
+        access_token = sess.obtain_access_token(request_token)
+
+        # Save the key to the file so we don't need to do this again
+        token_file = open(TOKENS, 'w')
+
+        token_key = access_token.key
+        token_secret = access_token.secret
+        token_file.write("%s|%s" % (token_key, token_secret))
+
+        token_file.close()
+
+    client = DropboxClient(sess)
+    print "Linked account: %s" % client.account_info()
+    return client
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('analyzed_folder', type=str, help='folder to put analysis in')
+    args = parser.parse_args()
+    global analyzedFolder, indexHtmlFile
+    analyzedFolder = args.analyzed_folder
+    if not os.path.isdir(analyzedFolder):
+        os.makedirs(analyzedFolder)
+    indexHtmlFile = os.path.join(analyzedFolder, "index.html")
+
+    client = connectDropbox()
+    cursor = None
+
+    entries = []
+    has_more = True
+    while has_more:
+        delta = client.delta(cursor)
+        reset = delta['reset']
+        if reset:
+            entries = []
+        entries += delta['entries']
+        cursor = delta['cursor']
+        has_more = delta['has_more']
+
+    allowedTimestamps = set()
+    for path, metadata in entries:
+        timestamp, ext = os.path.splitext(os.path.basename(path))
+        if ext == ".jpg" and metadata:
+            allowedTimestamps.add(timestamp)
+
+    # On startup, we first remove all vestigial directories
+    for f in os.listdir(analyzedFolder):
+        if not os.path.isdir(f):
+            continue
+        if f not in allowedTimestamps:
+            rm(f)
+
+    handleEntries(client, entries, forceReparse=False)
+
+    while True:
+        print "Checking delta from cursor %s" % cursor
+
+        delta = client.delta(cursor)
+        entries = delta['entries']
+        reset = delta['reset']
+        cursor = delta['cursor']
+        has_more = delta['has_more']
+
+        if reset:
+            shutil.rmtree(analyzedFolder)
+            os.path.mkdir(analyzedFolder)
+        
+        handleEntries(client, entries, forceReparse=True)
+
+        if not has_more:
+            time.sleep(DROPBOX_WAIT_PERDIOD)
 
 if __name__ == "__main__":
     main()
