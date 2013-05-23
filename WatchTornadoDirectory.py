@@ -20,6 +20,13 @@ analyzedFolder = None
 indexHtmlFile = None
 parserByTimestamp = {}
 
+# Number wrapper that doesn't print out a trailing L for longs
+class CustomInt(object):
+    def __init__(self, i):
+        self.i = i
+    def __repr__(self):
+        return str(self.i)
+
 def generateHtml():
     table = "<table class='gridtable'>\n"
     table += "<thead>\n"
@@ -37,7 +44,7 @@ def generateHtml():
         else:
             table += "<tr class='success'>\n"
             value = int("".join(str(d) for d in digits))
-            data.append([timestamp*1000, value])
+            data.append([CustomInt(timestamp*1000), value])
         link = os.path.relpath(parser.htmlFile, analyzedFolder)
         image = os.path.relpath(parser.stepImage(8), analyzedFolder)
         prettyDate = datetime.datetime.fromtimestamp(timestamp).ctime()
