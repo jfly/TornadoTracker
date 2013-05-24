@@ -190,7 +190,7 @@ $(function() {
     f.close()
     print "Updated %s" % indexHtmlFile
 def rm(path):
-    if os.path.is_dir(path):
+    if os.path.isdir(path):
         shutil.rmtree(path)
     elif os.path.exists(path):
         os.unlink(path)
