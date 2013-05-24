@@ -196,7 +196,8 @@ def rm(path):
         os.unlink(path)
 
 def handleEntries(client, entries, forceReparse=False):
-    for path, metadata in entries:
+    for i, (path, metadata) in enumerate(entries):
+        print "Processing entry %s/%s: %s" % ( i+1, len(entries), path )
         timestamp, ext = os.path.splitext(os.path.basename(path))
         if ext == ".jpg":
             parsedImageDir = os.path.join(analyzedFolder, timestamp)
