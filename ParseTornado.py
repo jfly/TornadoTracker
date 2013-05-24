@@ -7,12 +7,18 @@ import shutil
 import traceback
 import cgitb
 
+def looseInt(s, default):
+    try:
+        return int(s)
+    except ValueError:
+        return default
+
 def splitTimestampAndCorrect(imagePath):
     timestamp, ext = os.path.splitext(os.path.basename(imagePath))
     correct = None
     if '-' in timestamp:
         timestamp, correct = timestamp.split('-', 1)
-        correct = [ int(c) for c in correct ]
+        correct = [ looseInt(c, None) for c in correct ]
     timestamp = int(timestamp)
     return timestamp, correct
 
@@ -698,9 +704,11 @@ class Parser(object):
             self.digits_ = [ None ]
             einfo = sys.exc_info()
         else:
-            f = open(self.parsedValueTextFile, "w")
+            tmpFileName = self.parsedValueTextFile + ".bak"
+            f = open(tmpFileName, "w")
             f.write("%s\n" % "\n".join(str(d) for d in self.digits_))
             f.close()
+            os.rename(tmpFileName, self.parsedValueTextFile)
 
         self.generateHtml(einfo)
 
