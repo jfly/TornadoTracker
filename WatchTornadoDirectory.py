@@ -14,7 +14,7 @@ APP_KEY, APP_SECRET = open(APP_KEY_SECRET).read().strip().split("\n")
 
 ACCESS_TYPE = 'app_folder'
 
-DROPBOX_WAIT_PERDIOD = 60
+DROPBOX_WAIT_PERIOD = 60
 
 analyzedFolder = None
 indexHtmlFile = None
@@ -313,7 +313,7 @@ def main():
         handleEntries(client, entries, forceReparse=True)
 
         if not has_more:
-            time.sleep(DROPBOX_WAIT_PERDIOD)
+            time.sleep(DROPBOX_WAIT_PERIOD)
 
 if __name__ == "__main__":
     main()
